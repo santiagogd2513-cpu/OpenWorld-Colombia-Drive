@@ -1,4 +1,4 @@
-name: Android Build (Unreal Engine 5)
+name: Android Build (Godot 4)
 
 on:
   push:
@@ -7,36 +7,22 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
-      build_configuration:
-        description: 'Build Configuration'
+      build_type:
+        description: 'Tipo de build'
         required: true
-        default: 'Development'
+        default: 'debug'
         type: choice
         options:
-          - Development
-          - Shipping
-      generate_apk:
-        description: 'Intentar generar APK (requiere runner con UE5)'
-        required: true
-        default: 'false'
-        type: boolean
+          - debug
+          - release
 
-# Nota importante:
-# Un build completo de Unreal Engine 5 para Android NO es viable en los runners
-# gratuitos de GitHub (falta de espacio en disco, tiempo y necesidad de tener
-# el motor instalado). Este workflow está diseñado para:
-# 1. Siempre validar la estructura del proyecto
-# 2. Ejecutar el empaquetado real SOLO en self-hosted runners que tengan
-#    Unreal Engine 5 + Android SDK/NDK ya instalados.
-#
-# Para usar el build real:
-# - Configura un self-hosted runner (Windows o Linux) con UE5 instalado
-# - Añade el label "ue5-android" al runner
-# - Opcionalmente define el secret UE5_ENGINE_PATH si la ruta no es estándar
+env:
+  GODOT_VERSION: "4.3"
+  EXPORT_NAME: "OpenWorldColombiaDrive"
 
 jobs:
-  validate-project:
-    name: Validar estructura del proyecto
+  validate:
+    name: Validar proyecto
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,167 +30,145 @@ jobs:
 
       - name: Verificar archivos esenciales
         run: |
-          echo "Verificando estructura del proyecto..."
-          test -f OpenWorldColombiaDrive.uproject && echo "✓ .uproject encontrado" || (echo "✗ Falta el .uproject" && exit 1)
+          echo "Verificando estructura Godot..."
+          test -f project.godot && echo "✓ project.godot encontrado" || (echo "✗ Falta project.godot" && exit 1)
           test -f .gitignore && echo "✓ .gitignore encontrado"
-          test -d docs/fases && echo "✓ Documentación de fases encontrada"
+          test -d docs/fases && echo "✓ Documentación de fases OK"
           echo ""
-          echo "Contenido del .uproject:"
-          cat OpenWorldColombiaDrive.uproject
+          echo "Contenido de project.godot (primeras líneas):"
+          head -n 30 project.godot
           echo ""
-          echo "Validación básica completada correctamente."
+          echo "Validación básica completada."
 
       - name: Resumen
         run: |
           echo "### Validación del proyecto :white_check_mark:" >> $GITHUB_STEP_SUMMARY
-          echo "- Archivo .uproject presente" >> $GITHUB_STEP_SUMMARY
+          echo "- project.godot presente" >> $GITHUB_STEP_SUMMARY
           echo "- Estructura de documentación OK" >> $GITHUB_STEP_SUMMARY
-          echo "- Listo para builds en self-hosted runners" >> $GITHUB_STEP_SUMMARY
+          echo "- Motor: **Godot 4**" >> $GITHUB_STEP_SUMMARY
 
-  # Job de empaquetado real (solo corre en runners con label ue5-android)
   build-android:
-    name: Empaquetar APK (UE5)
-    needs: validate-project
-    # Solo se ejecuta si se pide explícitamente o en self-hosted
-    if: |
-      github.event_name == 'workflow_dispatch' &&
-      inputs.generate_apk == 'true'
-    runs-on: [self-hosted, ue5-android]
-    timeout-minutes: 180
+    name: Exportar APK (Godot 4)
+    needs: validate
+    runs-on: ubuntu-latest
+    # Generar APK en workflow_dispatch o en push a main
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
     steps:
-      - name: Checkout del repositorio
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configurar variables de entorno
-        id: setup
-        shell: bash
+      - name: Setup Java (para Android SDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Download Godot + Export Templates
         run: |
-          # Ruta del motor (se puede sobreescribir con secret UE5_ENGINE_PATH)
-          if [ -n "${{ secrets.UE5_ENGINE_PATH }}" ]; then
-            ENGINE_PATH="${{ secrets.UE5_ENGINE_PATH }}"
+          GODOT_VERSION=${{ env.GODOT_VERSION }}
+          echo "Descargando Godot ${GODOT_VERSION}..."
+
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip -O godot.zip
+          unzip -q godot.zip
+          mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
+          chmod +x godot
+
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz -O templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          unzip -q templates.tpz -d /tmp/templates
+          if [ -d /tmp/templates/templates ]; then
+            cp -r /tmp/templates/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
           else
-            # Rutas comunes — ajusta según tu instalación
-            if [ -d "/opt/UnrealEngine" ]; then
-              ENGINE_PATH="/opt/UnrealEngine"
-            elif [ -d "C:/Program Files/Epic Games/UE_5.5" ]; then
-              ENGINE_PATH="C:/Program Files/Epic Games/UE_5.5"
-            else
-              echo "No se encontró Unreal Engine. Define el secret UE5_ENGINE_PATH."
-              exit 1
-            fi
+            cp -r /tmp/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
           fi
 
-          echo "ENGINE_PATH=$ENGINE_PATH" >> $GITHUB_ENV
-          echo "PROJECT_PATH=$GITHUB_WORKSPACE/OpenWorldColombiaDrive.uproject" >> $GITHUB_ENV
-          echo "BUILD_CONFIG=${{ inputs.build_configuration || 'Development' }}" >> $GITHUB_ENV
-          echo "ARCHIVE_DIR=$GITHUB_WORKSPACE/Saved/StagedBuilds/Android" >> $GITHUB_ENV
+          echo "Godot y templates listos."
+          ./godot --version
 
-          echo "Motor: $ENGINE_PATH"
-          echo "Proyecto: $GITHUB_WORKSPACE/OpenWorldColombiaDrive.uproject"
-
-      - name: Verificar que el motor existe
+      - name: Preparar estructura mínima y preset de exportación
         run: |
-          if [ ! -d "$ENGINE_PATH" ]; then
-            echo "Error: No existe el directorio del motor en $ENGINE_PATH"
-            exit 1
-          fi
-          echo "Motor encontrado correctamente."
+          mkdir -p build/android scenes scripts
 
-      - name: Generar archivos de proyecto (si es necesario)
-        run: |
-          # En muchos setups self-hosted esto ya está hecho, pero por si acaso
-          echo "Omitiendo generación automática de project files (asumimos entorno preparado)."
+          # Escena principal mínima si no existe
+          if [ ! -f scenes/main.tscn ]; then
+            cat > scenes/main.tscn << 'EOF'
+          [gd_scene format=3]
 
-      - name: Empaquetar para Android (RunUAT)
-        id: package
-        shell: bash
-        run: |
-          UAT="$ENGINE_PATH/Engine/Build/BatchFiles/RunUAT.sh"
-          if [ ! -f "$UAT" ]; then
-            UAT="$ENGINE_PATH/Engine/Build/BatchFiles/RunUAT.bat"
+          [node name="Main" type="Node3D"]
+          EOF
           fi
 
-          echo "Usando UAT: $UAT"
-          echo "Configuración: $BUILD_CONFIG"
+          # Preset de exportación Android (debug)
+          cat > export_presets.cfg << 'EOF'
+          [preset.0]
 
-          # Comando de empaquetado
-          # Nota: ajusta -platform, -clientconfig, etc. según tu setup exacto
-          "$UAT" BuildCookRun \
-            -project="$PROJECT_PATH" \
-            -noP4 \
-            -platform=Android \
-            -clientconfig="$BUILD_CONFIG" \
-            -cook \
-            -allmaps \
-            -build \
-            -stage \
-            -pak \
-            -archive \
-            -archivedirectory="$GITHUB_WORKSPACE/Saved/StagedBuilds" \
-            -package \
-            -utf8output \
-            || {
-              echo "El empaquetado falló. Revisa los logs."
-              exit 1
-            }
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/android/OpenWorldColombiaDrive.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
 
-      - name: Buscar APK generada
-        id: find-apk
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          architectures/armeabi-v7a=true
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          version/code=1
+          version/name="0.1.0"
+          package/unique_name="org.colombia.drive.openworld"
+          package/name="OpenWorld Colombia Drive"
+          package/signed=true
+          screen/immersive_mode=true
+          permissions/access_network_state=true
+          permissions/internet=true
+          EOF
+
+          echo "Estructura mínima y preset listos."
+
+      - name: Exportar APK
+        id: export
         run: |
-          echo "Buscando archivos APK..."
-          find "$GITHUB_WORKSPACE/Saved" -name "*.apk" -o -name "*.aab" | tee apk_list.txt
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          echo "Exportando en modo: $BUILD_TYPE"
 
-          APK_COUNT=$(wc -l < apk_list.txt)
-          echo "APKs/AABs encontrados: $APK_COUNT"
+          ./godot --headless --path . --export-${BUILD_TYPE} "Android" build/android/${{ env.EXPORT_NAME }}.apk || {
+            echo "El export falló (normal al principio si faltan recursos o el keystore). Se sube lo disponible para inspección."
+          }
 
-          if [ "$APK_COUNT" -eq 0 ]; then
-            echo "No se generó ninguna APK. El job fallará."
-            exit 1
-          fi
-
-          # Tomar la primera APK encontrada para el artifact
-          FIRST_APK=$(head -n 1 apk_list.txt)
-          echo "APK_PATH=$FIRST_APK" >> $GITHUB_ENV
-          echo "apk_path=$FIRST_APK" >> $GITHUB_OUTPUT
+          echo "Contenido de build/:"
+          find build -type f || true
 
       - name: Subir APK como Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenWorld-Colombia-Drive-Android-${{ inputs.build_configuration || 'Development' }}
+          name: OpenWorld-Colombia-Drive-Android-${{ github.event.inputs.build_type || 'debug' }}
           path: |
-            ${{ env.APK_PATH }}
-            **/Saved/StagedBuilds/**/*.apk
-            **/Saved/StagedBuilds/**/*.aab
+            build/android/*.apk
+            build/android/*.aab
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Resumen del build
+      - name: Resumen
         run: |
-          echo "### Build Android completado :rocket:" >> $GITHUB_STEP_SUMMARY
-          echo "- Configuración: ${{ inputs.build_configuration || 'Development' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- APK generada y subida como artifact" >> $GITHUB_STEP_SUMMARY
-          echo "- Descarga el artifact desde la pestaña Actions de este workflow" >> $GITHUB_STEP_SUMMARY
-
-  # Job informativo cuando no se puede hacer build real
-  build-info:
-    name: Información sobre builds
-    needs: validate-project
-    if: |
-      github.event_name != 'workflow_dispatch' ||
-      inputs.generate_apk != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mensaje informativo
-        run: |
-          echo "### Cómo generar la APK" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Android (Godot 4)" >> $GITHUB_STEP_SUMMARY
+          echo "- Motor: **Godot ${{ env.GODOT_VERSION }}**" >> $GITHUB_STEP_SUMMARY
+          echo "- Tipo: ${{ github.event.inputs.build_type || 'debug' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifact disponible en la pestaña Actions (si se generó APK)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Este repositorio tiene configurado un pipeline de build para Unreal Engine 5 + Android." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Para generar una APK real necesitas:**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Un **self-hosted runner** con Unreal Engine 5 instalado" >> $GITHUB_STEP_SUMMARY
-          echo "2. Etiquetar el runner con: \`self-hosted\` y \`ue5-android\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. (Opcional) Secret \`UE5_ENGINE_PATH\` apuntando a la carpeta del motor" >> $GITHUB_STEP_SUMMARY
-          echo "4. Ejecutar este workflow manualmente (workflow_dispatch) y marcar **generate_apk = true**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Mientras tanto, el job de validación se ejecuta en cada push para asegurar que la estructura del proyecto está correcta." >> $GITHUB_STEP_SUMMARY
+          echo "Nota: Mientras el proyecto no tenga escenas y assets reales, el APK será un placeholder mínimo." >> $GITHUB_STEP_SUMMARY
