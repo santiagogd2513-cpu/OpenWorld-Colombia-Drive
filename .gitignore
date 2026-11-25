@@ -1,0 +1,69 @@
+# Unreal Engine 5 - GitIgnore
+
+# Visual Studio / Rider / VSCode
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+
+# Builds
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+
+# Binary Files
+*.exe
+*.dll
+*.lib
+*.pdb
+*.apk
+*.aab
+*.ipa
+
+# UE Generated
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Local config (keep Default*.ini)
+Config/CrashReportClient/
+Config/Layouts/
+Config/Windows/
+Config/Android/AndroidEngine.ini
+Config/*/DeviceProfiles/
+
+# Content that should not be versioned (large assets later)
+# Content/Developers/
+# Content/Collections/
+# Content/Maps/TestMaps/ (optional)
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python / other tools
+__pycache__/
+*.pyc
+.venv/
+
+# Large media (add later if needed)
+*.mp4
+*.mov
+*.wav
+*.mp3
+
+# Packaging
+Dist/
+Releases/
