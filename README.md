@@ -9,68 +9,45 @@ Ruta principal: **Bogotá → Medellín** (~420 km reales de autopista, páramo,
 
 ## 🚀 Estado Actual
 
-**Fase Beta 1 — EN PROGRESO**
+| Fase | Estado |
+|------|--------|
+| **Beta 1** — Motor, rendimiento, ciclo día/noche y Eye Adaptation | 🟡 En progreso |
+| **Beta 2** — Física (Chaos Vehicle), streaming y tráfico básico | ⏳ Preparada |
 
-- Motor definido: **Unreal Engine 5**
-- Enfoque actual: rendimiento en Android + ciclo día/noche + **adaptación ocular (Eye Adaptation)** + mapa de prueba
-- Archivos base del proyecto ya creados (`.uproject`, `.gitignore`, documentación de setup)
+### Documentación clave
+- [Beta 1](docs/fases/beta-1.md) · [Tareas Beta 1](docs/fases/beta-1/tasks.md)
+- [Beta 2](docs/fases/beta-2.md) · [Tareas Beta 2](docs/fases/beta-2/tasks.md)
+- [Setup UE5 + Android](docs/setup-ue5-android.md)
 
-📄 Documentación de la fase: [docs/fases/beta-1.md](docs/fases/beta-1.md)  
-✅ Lista de tareas: [docs/fases/beta-1/tasks.md](docs/fases/beta-1/tasks.md)  
-⚙️ Guía de setup: [docs/setup-ue5-android.md](docs/setup-ue5-android.md)
+### CI / GitHub Actions
+Ya está configurado el workflow **Android Build**:
+- Validación automática de la estructura del proyecto en cada push
+- Pipeline listo para generar **APK** usando un **self-hosted runner** con Unreal Engine 5 (label `ue5-android`)
 
----
+Archivo: [`.github/workflows/android-build.yml`](.github/workflows/android-build.yml)
 
-## 🎯 Visión del Proyecto
-
-Recrear la experiencia de manejar por Colombia en distintas décadas:
-- Vehículos icónicos (Renault 12, Mazda 323, Toyota Hilux, camionetas blindadas, etc.)
-- Carreteras reales con cambios de clima y altitud (Bogotá 2600 m → Páramo de Sonsón → Medellín 1500 m)
-- Tráfico caótico, motos, buses, niebla, atardeceres andinos y noches oscuras
-- Música y ambiente de cada época
-
----
-
-## 📅 Estructura de Desarrollo
-
-### Fases Beta
-
-| Fase | Nombre | Estado |
-|------|--------|--------|
-| **Beta 1** | Motor Gráfico, Rendimiento y Ciclos Visuales (UE5) | 🟡 En progreso |
-| **Beta 2** | Física de Vehículos + Streaming + Tráfico Básico | ⏳ Pendiente |
-
-### Fases Principales
-1. Mundo y Ruta Completa  
-2. Flota de Vehículos por Década  
-3. IA, Tráfico Denso y Mundo Vivo  
-4. Clima, Ambiente y Audio  
-5. Gameplay, Modos y Progresión  
-6. Optimización Final, Multidioma y Lanzamiento  
+> **Nota importante:** Los runners gratuitos de GitHub no tienen suficiente espacio ni el motor instalado para compilar Unreal Engine 5. Para obtener una APK real necesitas un self-hosted runner con UE5 + Android SDK/NDK.
 
 ---
 
-## 🌍 Multidioma
-Español (principal) + Inglés desde el inicio. Estructura preparada para más idiomas.
+## 🎯 Visión
+Recrear la experiencia de manejar por Colombia en las décadas 80s-2010s: vehículos de época, tráfico caótico, páramo, atardeceres andinos y adaptación ocular realista al entrar/salir de túneles.
 
 ---
 
-## 📁 Estructura actual del repositorio
+## 📅 Fases
 
-```
-/
-├── OpenWorldColombiaDrive.uproject
-├── .gitignore
-├── README.md
-├── docs/
-│   ├── vision.md
-│   ├── setup-ue5-android.md
-│   └── fases/
-│       ├── beta-1.md
-│       ├── beta-1/tasks.md
-│       ├── beta-2.md
-│       └── README.md
-```
+**Betas**
+1. Motor gráfico + ciclos visuales + rendimiento (actual)
+2. Física de vehículos + streaming + tráfico básico
+
+**Principales**
+1. Mundo y ruta completa Bogotá-Medellín  
+2. Flota de vehículos por década  
+3. IA y mundo vivo  
+4. Clima, ambiente y audio  
+5. Gameplay y progresión  
+6. Optimización final + multidioma + lanzamiento  
 
 ---
 
