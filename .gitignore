@@ -1,69 +1,55 @@
-# Unreal Engine 5 - GitIgnore
+# Godot 4+ specific ignores
+.godot/
+.import/
+export_presets.cfg
+export_credentials.cfg
 
-# Visual Studio / Rider / VSCode
+# Imported assets (generated)
+*.translation
+
+# Builds / exports
+build/
+builds/
+exports/
+*.apk
+*.aab
+*.ipa
+*.exe
+*.x86_64
+*.app
+
+# System / OS
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+
+# IDE / Editor
 .vs/
 .vscode/
 .idea/
 *.suo
 *.user
 *.userosscache
-*.sln.docstates
-*.sln
-*.sdf
-*.opensdf
-*.VC.db
-*.VC.VC.opendb
 
-# Builds
-Binaries/
-DerivedDataCache/
-Intermediate/
-Saved/
-Build/
-
-# Binary Files
-*.exe
-*.dll
-*.lib
-*.pdb
-*.apk
-*.aab
-*.ipa
-
-# UE Generated
+# Logs & temp
 *.log
 *.tmp
 *.temp
-*.cache
 
-# Local config (keep Default*.ini)
-Config/CrashReportClient/
-Config/Layouts/
-Config/Windows/
-Config/Android/AndroidEngine.ini
-Config/*/DeviceProfiles/
+# Android specific (local)
+android/
+local.properties
 
-# Content that should not be versioned (large assets later)
-# Content/Developers/
-# Content/Collections/
-# Content/Maps/TestMaps/ (optional)
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Python / other tools
+# Python / tools
 __pycache__/
 *.pyc
 .venv/
 
-# Large media (add later if needed)
-*.mp4
-*.mov
-*.wav
-*.mp3
-
-# Packaging
-Dist/
-Releases/
+# Old Unreal leftovers (cleanup)
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+*.uproject
+OpenWorldColombiaDrive.uproject
