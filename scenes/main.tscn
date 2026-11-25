@@ -1,0 +1,185 @@
+[gd_scene load_steps=12 format=3 uid="uid://main_scene_beta1"]
+
+[ext_resource type="Script" path="res://scripts/day_night_cycle.gd" id="1_daynight"]
+[ext_resource type="PackedScene" path="res://vehicles/renault12_test.tscn" id="2_vehicle"]
+[ext_resource type="Script" path="res://scripts/player_camera.gd" id="3_camera"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_top_color = Color(0.15, 0.35, 0.7, 1)
+sky_horizon_color = Color(0.6, 0.7, 0.85, 1)
+ground_bottom_color = Color(0.2, 0.18, 0.15, 1)
+ground_horizon_color = Color(0.55, 0.5, 0.4, 1)
+sun_angle_max = 35.0
+
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_main")
+tonal_mapper = 2
+ssao_enabled = true
+ssao_radius = 1.5
+ssil_enabled = true
+sdfgi_enabled = false
+glow_enabled = true
+glow_intensity = 0.4
+glow_bloom = 0.15
+fog_enabled = true
+fog_light_color = Color(0.7, 0.75, 0.8, 1)
+fog_density = 0.0008
+fog_aerial_perspective = 0.3
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.02
+adjustment_enabled = true
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributes_exposure"]
+auto_exposure_enabled = true
+auto_exposure_scale = 0.3
+auto_exposure_speed = 1.2
+auto_exposure_min_sensitivity = 50.0
+auto_exposure_max_sensitivity = 1200.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_road"]
+albedo_color = Color(0.18, 0.18, 0.2, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_tunnel"]
+albedo_color = Color(0.12, 0.12, 0.14, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="Mat_water"]
+albedo_color = Color(0.05, 0.15, 0.25, 0.85)
+metallic = 0.3
+roughness = 0.05
+proximity_fade_enabled = true
+proximity_fade_distance = 1.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_bridge"]
+albedo_color = Color(0.35, 0.32, 0.28, 1)
+roughness = 0.7
+
+[node name="Main" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+camera_attributes = SubResource("CameraAttributes_exposure")
+script = ExtResource("1_daynight")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.353, 0.353, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 25, 0)
+shadow_enabled = true
+directional_shadow_mode = 1
+directional_shadow_max_distance = 180.0
+light_energy = 1.2
+light_color = Color(1, 0.95, 0.85, 1)
+
+[node name="SunPivot" type="Node3D" parent="."]
+
+[node name="Road" type="Node3D" parent="."]
+
+[node name="RoadSection1" type="CSGBox3D" parent="Road"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+use_collision = true
+size = Vector3(12, 0.4, 80)
+material = SubResource("Mat_road")
+
+[node name="RoadSection2" type="CSGBox3D" parent="Road"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -90)
+use_collision = true
+size = Vector3(12, 0.4, 100)
+material = SubResource("Mat_road")
+
+[node name="RoadSection3" type="CSGBox3D" parent="Road"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -200)
+use_collision = true
+size = Vector3(12, 0.4, 120)
+material = SubResource("Mat_road")
+
+[node name="Tunnel" type="Node3D" parent="."]
+
+[node name="TunnelFloor" type="CSGBox3D" parent="Tunnel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -55)
+use_collision = true
+size = Vector3(11, 0.35, 45)
+material = SubResource("Mat_tunnel")
+
+[node name="TunnelWallLeft" type="CSGBox3D" parent="Tunnel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.2, 3.5, -55)
+use_collision = true
+size = Vector3(0.8, 7, 45)
+material = SubResource("Mat_tunnel")
+
+[node name="TunnelWallRight" type="CSGBox3D" parent="Tunnel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.2, 3.5, -55)
+use_collision = true
+size = Vector3(0.8, 7, 45)
+material = SubResource("Mat_tunnel")
+
+[node name="TunnelRoof" type="CSGBox3D" parent="Tunnel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.2, -55)
+use_collision = true
+size = Vector3(13.5, 0.7, 45)
+material = SubResource("Mat_tunnel")
+
+[node name="TunnelDarkness" type="CSGBox3D" parent="Tunnel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -55)
+size = Vector3(11.5, 6.5, 44)
+material = SubResource("Mat_tunnel")
+
+[node name="Bridge" type="Node3D" parent="."]
+
+[node name="BridgeDeck" type="CSGBox3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -160)
+use_collision = true
+size = Vector3(11, 0.5, 50)
+material = SubResource("Mat_bridge")
+
+[node name="BridgePillar1" type="CSGBox3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.5, -145)
+use_collision = true
+size = Vector3(1.2, 4, 1.2)
+material = SubResource("Mat_bridge")
+
+[node name="BridgePillar2" type="CSGBox3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, -145)
+use_collision = true
+size = Vector3(1.2, 4, 1.2)
+material = SubResource("Mat_bridge")
+
+[node name="BridgePillar3" type="CSGBox3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.5, -175)
+use_collision = true
+size = Vector3(1.2, 4, 1.2)
+material = SubResource("Mat_bridge")
+
+[node name="BridgePillar4" type="CSGBox3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, -175)
+use_collision = true
+size = Vector3(1.2, 4, 1.2)
+material = SubResource("Mat_bridge")
+
+[node name="Water" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, -160)
+size = Vector3(80, 2, 70)
+material = SubResource("Mat_water")
+
+[node name="ReflectionProbe" type="ReflectionProbe" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -160)
+update_mode = 0
+max_distance = 60.0
+size = Vector3(50, 20, 50)
+origin_offset = Vector3(0, 1, 0)
+
+[node name="Renault12" parent="." instance=ExtResource("2_vehicle")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 15)
+
+[node name="PlayerCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.94, 0.34, 0, -0.34, 0.94, 0, 5, 22)
+current = true
+fov = 70.0
+far = 400.0
+script = ExtResource("3_camera")
+
+[node name="SpawnPoint" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 15)
