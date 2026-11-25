@@ -1,7 +1,7 @@
-# OpenWorld-Colombia-Drive
+# OpenWorld Colombia Drive
 
 **Juego de conducción de mundo abierto ambientado en la Colombia de los años 80, 90, 2000 y 2010.**  
-Ruta principal: **Bogotá → Medellín** (~420 km reales de autopista, páramo, montaña y valle).
+Ruta principal: **Bogotá → Medellín**.
 
 **Motor oficial: Godot 4**
 
@@ -11,53 +11,38 @@ Ruta principal: **Bogotá → Medellín** (~420 km reales de autopista, páramo,
 
 | Fase | Estado |
 |------|--------|
-| **Beta 1** — Motor, rendimiento, ciclo día/noche y adaptación ocular | 🟡 En progreso (ahora en Godot 4) |
-| **Beta 2** — Física de vehículos, streaming y tráfico básico | ⏳ Preparada |
+| **Beta 1** — Escenario de prueba, ciclo día/noche, adaptación ocular, Renault 12 | 🟡 Casi lista (primer APK en generación) |
+| **Beta 2** — Física refinada, streaming, tráfico básico | ⏳ Siguiente |
 
-### Por qué Godot 4
-- Se puede desarrollar y compilar **sin necesidad de un PC de alto rendimiento**
-- GitHub Actions **sí puede generar la APK** en los runners gratuitos
-- Excelente soporte para Android
-- Física de vehículos usable (VehicleBody3D) — se puede hacer arcade estilo GTA o más realista
-- Se ve bien cuando se trabaja bien la iluminación y post-procesado
+### Primer APK
+GitHub Actions está configurado para generar el **primer APK** en cada push a `main`.
 
-### Documentación clave
-- [Beta 1](docs/fases/beta-1.md)
-- [Beta 2](docs/fases/beta-2.md)
-- [Setup Godot + Android](docs/setup-godot-android.md)
-- [CI / Builds APK](docs/ci-android-build.md)
+Configuración Android del juego:
+- **Nombre:** OpenWorld Colombia Drive
+- **Icono:** personalizado (carretera + atardecer colombiano)
+- **Categoría:** Juego
+- **Modo inmersivo:** activado (se ocultan las barras de navegación y estado)
+- **Package:** `org.colombia.drive.openworld`
 
-### CI / GitHub Actions
-Workflow configurado para **Godot 4**:
-- Validación automática en cada push
-- Generación de APK real en runners de GitHub (ya no necesita self-hosted ni PC potente)
-
-Archivo: [`.github/workflows/android-build.yml`](.github/workflows/android-build.yml)
+Ve a la pestaña **Actions** del repositorio → workflow **Android Build (Godot 4)** → descarga el Artifact cuando termine.
 
 ---
 
-## 🎯 Visión
-Recrear la experiencia de manejar por Colombia en las décadas 80s-2010s: vehículos de época, tráfico caótico, páramo, atardeceres andinos y adaptación ocular al entrar/salir de túneles.
-
-Física de vehículos: estilo arcade (tipo GTA) está perfectamente bien.
-
----
-
-## 📅 Fases
-
-**Betas**
-1. Motor gráfico + ciclos visuales + rendimiento (actual)
-2. Física de vehículos + streaming + tráfico básico
-
-**Principales**
-1. Mundo y ruta completa Bogotá-Medellín  
-2. Flota de vehículos por década  
-3. IA y mundo vivo  
-4. Clima, ambiente y audio  
-5. Gameplay y progresión  
-6. Optimización final + multidioma + lanzamiento  
+## Controles (teclado / prueba)
+- **W** — Acelerar
+- **S** — Frenar / Reversa
+- **A / D** — Girar
+- **Page Up / Page Down** — Avanzar o retroceder el ciclo día-noche
 
 ---
 
-**Hecho con ❤️ para recrear las carreteras colombianas de verdad.**  
-*(El gato ya no puede sabotear el build)*
+## Escenario de prueba actual (Beta 1)
+- Carretera
+- Túnel (prueba de adaptación ocular)
+- Puente sobre agua (reflejos)
+- Vehículo: Renault 12 placeholder
+- Ciclo día → atardecer → noche → amanecer
+
+---
+
+**Hecho con ❤️ para recrear las carreteras colombianas de verdad.**
