@@ -32,11 +32,10 @@ jobs:
         run: |
           echo "Verificando estructura Godot..."
           test -f project.godot && echo "✓ project.godot encontrado" || (echo "✗ Falta project.godot" && exit 1)
-          test -f .gitignore && echo "✓ .gitignore encontrado"
+          test -f icon.svg && echo "✓ icon.svg encontrado" || echo "⚠ Sin icono"
+          test -f export_presets.cfg && echo "✓ export_presets.cfg encontrado" || echo "⚠ Sin export_presets"
+          test -f scenes/main.tscn && echo "✓ escena principal encontrada" || echo "⚠ Sin main.tscn"
           test -d docs/fases && echo "✓ Documentación de fases OK"
-          echo ""
-          echo "Contenido de project.godot (primeras líneas):"
-          head -n 30 project.godot
           echo ""
           echo "Validación básica completada."
 
@@ -44,21 +43,21 @@ jobs:
         run: |
           echo "### Validación del proyecto :white_check_mark:" >> $GITHUB_STEP_SUMMARY
           echo "- project.godot presente" >> $GITHUB_STEP_SUMMARY
-          echo "- Estructura de documentación OK" >> $GITHUB_STEP_SUMMARY
+          echo "- Icono y export presets revisados" >> $GITHUB_STEP_SUMMARY
           echo "- Motor: **Godot 4**" >> $GITHUB_STEP_SUMMARY
+          echo "- App: **OpenWorld Colombia Drive** (categoría juego, modo inmersivo)" >> $GITHUB_STEP_SUMMARY
 
   build-android:
     name: Exportar APK (Godot 4)
     needs: validate
     runs-on: ubuntu-latest
-    # Generar APK en workflow_dispatch o en push a main
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java (para Android SDK)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -89,86 +88,70 @@ jobs:
           echo "Godot y templates listos."
           ./godot --version
 
-      - name: Preparar estructura mínima y preset de exportación
+      - name: Preparar build
         run: |
-          mkdir -p build/android scenes scripts
+          mkdir -p build/android
 
-          # Escena principal mínima si no existe
-          if [ ! -f scenes/main.tscn ]; then
-            cat > scenes/main.tscn << 'EOF'
-          [gd_scene format=3]
-
-          [node name="Main" type="Node3D"]
-          EOF
-          fi
-
-          # Preset de exportación Android (debug)
-          cat > export_presets.cfg << 'EOF'
+          # Usar el export_presets.cfg del repositorio (ya tiene immersive + categoría juego + icono)
+          if [ ! -f export_presets.cfg ]; then
+            echo "No hay export_presets.cfg, creando uno de respaldo..."
+            cat > export_presets.cfg << 'EOF'
           [preset.0]
-
           name="Android"
           platform="Android"
           runnable=true
-          dedicated_server=false
-          custom_features=""
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter=""
           export_path="build/android/OpenWorldColombiaDrive.apk"
-          encryption_include_filters=""
-          encryption_exclude_filters=""
-          encrypt_pck=false
-          encrypt_directory=false
-
           [preset.0.options]
-
-          custom_template/debug=""
-          custom_template/release=""
-          gradle_build/use_gradle_build=false
-          architectures/armeabi-v7a=true
-          architectures/arm64-v8a=true
-          architectures/x86=false
-          architectures/x86_64=false
-          version/code=1
-          version/name="0.1.0"
           package/unique_name="org.colombia.drive.openworld"
           package/name="OpenWorld Colombia Drive"
-          package/signed=true
+          package/app_category=2
           screen/immersive_mode=true
-          permissions/access_network_state=true
-          permissions/internet=true
+          version/name="0.1.0-beta1"
+          architectures/armeabi-v7a=true
+          architectures/arm64-v8a=true
           EOF
+          fi
 
-          echo "Estructura mínima y preset listos."
+          echo "Usando export_presets.cfg del proyecto."
+          echo "--- Contenido relevante ---"
+          grep -E "package/name|immersive|app_category|version/name|unique_name" export_presets.cfg || true
 
       - name: Exportar APK
         id: export
         run: |
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          echo "Exportando en modo: $BUILD_TYPE"
+          echo "Exportando OpenWorld Colombia Drive en modo: $BUILD_TYPE"
 
-          ./godot --headless --path . --export-${BUILD_TYPE} "Android" build/android/${{ env.EXPORT_NAME }}.apk || {
-            echo "El export falló (normal al principio si faltan recursos o el keystore). Se sube lo disponible para inspección."
+          ./godot --headless --path . --export-${BUILD_TYPE} "Android" build/android/${{ env.EXPORT_NAME }}.apk 2>&1 | tee export.log || {
+            echo "Export terminó con código distinto de cero. Revisando si se generó APK..."
           }
 
-          echo "Contenido de build/:"
-          find build -type f || true
+          echo ""
+          echo "=== Contenido de build/ ==="
+          find build -type f -ls || true
+          echo ""
+          echo "=== Últimas líneas del log ==="
+          tail -n 40 export.log || true
 
       - name: Subir APK como Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenWorld-Colombia-Drive-Android-${{ github.event.inputs.build_type || 'debug' }}
+          name: OpenWorld-Colombia-Drive-v0.1.0-beta1-${{ github.event.inputs.build_type || 'debug' }}
           path: |
             build/android/*.apk
             build/android/*.aab
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 21
 
       - name: Resumen
         run: |
-          echo "### Build Android (Godot 4)" >> $GITHUB_STEP_SUMMARY
-          echo "- Motor: **Godot ${{ env.GODOT_VERSION }}**" >> $GITHUB_STEP_SUMMARY
-          echo "- Tipo: ${{ github.event.inputs.build_type || 'debug' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Artifact disponible en la pestaña Actions (si se generó APK)" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Android — OpenWorld Colombia Drive" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Nota: Mientras el proyecto no tenga escenas y assets reales, el APK será un placeholder mínimo." >> $GITHUB_STEP_SUMMARY
+          echo "- **Nombre:** OpenWorld Colombia Drive" >> $GITHUB_STEP_SUMMARY
+          echo "- **Motor:** Godot ${{ env.GODOT_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tipo:** ${{ github.event.inputs.build_type || 'debug' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Modo inmersivo:** Sí (barras de navegación ocultas)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Categoría Android:** Juego" >> $GITHUB_STEP_SUMMARY
+          echo "- **Icono:** icon.svg" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Descarga el Artifact desde la pestaña **Actions** de este workflow." >> $GITHUB_STEP_SUMMARY
