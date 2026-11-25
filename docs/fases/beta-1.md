@@ -1,26 +1,26 @@
 # Fase Beta 1 — Motor Gráfico, Rendimiento y Ciclos Visuales
 
 **Estado:** En progreso  
-**Motor oficial:** Unreal Engine 5  
+**Motor oficial:** Godot 4  
 **Plataforma objetivo:** Android (gama media-alta)
 
 ---
 
 ## Objetivo Principal
 
-Validar que Unreal Engine 5 puede entregar una experiencia visual de alta calidad y rendimiento estable en Android, usando un tramo de prueba de la ruta Bogotá-Medellín.  
-Prioridad absoluta: **ciclos de iluminación realistas + adaptación ocular (Eye Adaptation / Auto Exposure)**.
+Validar que **Godot 4** puede entregar una experiencia visual agradable y rendimiento estable en Android, usando un tramo de prueba de la ruta Bogotá-Medellín.  
+Prioridad absoluta: **ciclos de iluminación + adaptación ocular (exposición automática)**.
 
 ---
 
 ## Alcance Detallado
 
-### 1. Motor y Configuración Base (UE5)
-- Proyecto Unreal Engine 5 creado y configurado para Android
-- Target de renderizado: Forward o Deferred optimizado para móvil (Mobile Renderer / Android Vulkan prioritario)
-- Plugins necesarios activados (Enhanced Input, Water si aplica, etc.)
-- Sistema de World Partition / Level Streaming preparado para el mapa de prueba
-- Configuración de Scalability (Low / Medium / High) específica para Android
+### 1. Motor y Configuración Base (Godot 4)
+- Proyecto Godot 4 configurado (`project.godot` ya existe)
+- Renderer: Forward+ (o Compatibility si hace falta en dispositivos muy bajos)
+- Física: Jolt Physics (ya configurado)
+- Estructura de carpetas: `scenes/`, `scripts/`, etc.
+- Export a Android funcionando vía GitHub Actions
 
 ### 2. Mapa de Prueba (Prototype Stretch)
 Tramo representativo de **5 a 15 km** de la ruta Bogotá → Medellín que incluya:
@@ -30,71 +30,59 @@ Tramo representativo de **5 a 15 km** de la ruta Bogotá → Medellín que inclu
 - Sección con niebla / ambiente de páramo
 - Cambios de elevación visibles
 
-El mapa debe permitir probar streaming, LOD, y cambios bruscos de iluminación.
-
 ### 3. Sistemas Visuales Críticos
-- **Ciclo completo Día → Atardecer → Noche → Amanecer** (controlado por tiempo o tecla de debug)
-- **Adaptación Ocular (Eye Adaptation / Auto Exposure)**  
-  Transiciones suaves y creíbles al entrar y salir de túneles, zonas oscuras y cambios de luz solar.
-- Iluminación dinámica (Directional Light + Sky Atmosphere + Sky Light)
-- Niebla volumétrica (Exponential Height Fog + Volumetric Fog)
-- Sombras (cascaded shadow maps optimizadas para móvil)
-- Post-process volume con Auto Exposure correctamente configurado
+- **Ciclo completo Día → Atardecer → Noche → Amanecer**
+- **Adaptación ocular** (CameraAttributesPractical o similar + Environment)
+- DirectionalLight3D + WorldEnvironment + Sky
+- Niebla (Environment fog)
+- Sombras razonables para móvil
 - Faros de vehículos y luces artificiales básicas para la noche
 
 ### 4. Rendimiento (Android)
 **Targets:**
 - 30 FPS mínimos estables / 60 FPS deseables en dispositivos de referencia
-- Dispositivos de referencia: Snapdragon 7 Gen 1 / 7+ Gen 2 / Dimensity 7200 o superiores
-
-Métricas a medir y documentar:
-- FPS promedio + 1% lows
-- Uso de RAM / VRAM
-- Temperatura y throttling
-- Consumo de batería aproximado
-- Tiempo de carga del mapa de prueba
+- Dispositivos de referencia: Snapdragon 7 series / Dimensity equivalentes o superiores
 
 ### 5. Controles y Cámara de Prueba
 - Controles táctiles básicos (acelerar, frenar, girar)
-- Cámara de conducción en tercera persona (y opcional primera persona)
-- HUD mínimo: velocidad, reloj de ciclo día/noche, indicador de FPS
+- Cámara de conducción en tercera persona
+- HUD mínimo: velocidad, reloj del ciclo, FPS
 
 ---
 
-## Criterios de Éxito (Definition of Done)
+## Criterios de Éxito
 
-- [ ] Proyecto UE5 abre y empaqueta correctamente para Android
-- [ ] Mapa de prueba se puede recorrer de punta a punta sin crashes
+- [ ] Proyecto Godot abre y se exporta a Android (vía Actions o local)
+- [ ] Mapa de prueba se puede recorrer
 - [ ] Ciclo día/noche funciona y se ve bien
-- [ ] Adaptación ocular se siente natural al entrar/salir de zonas oscuras
-- [ ] Rendimiento cumple los targets en al menos un dispositivo de referencia
-- [ ] Existe un video de demostración (día → noche + túnel)
-- [ ] Documento de benchmarks publicado en `/docs/fases/beta-1/`
+- [ ] Adaptación ocular se nota al entrar/salir de zonas oscuras
+- [ ] Rendimiento aceptable en al menos un dispositivo real
+- [ ] Existe un video de demostración
+- [ ] Primera APK generada y descargable desde GitHub Actions
 
 ---
 
-## Entregables de la Fase Beta 1
+## Entregables
 
-1. Proyecto Unreal Engine 5 base configurado para Android
+1. Proyecto Godot 4 base
 2. Mapa de prueba jugable
-3. Sistema de ciclo día/noche + Eye Adaptation funcional
-4. Build APK/AAB de prueba
+3. Ciclo día/noche + adaptación ocular
+4. Build APK de prueba (generado por GitHub Actions)
 5. Reporte de rendimiento
 6. Video de demostración
-7. Lista de problemas conocidos y siguientes pasos hacia Beta 2
+7. Lista de problemas conocidos → entrada a Beta 2
 
 ---
 
-## Próximos pasos inmediatos (orden recomendado)
+## Próximos pasos inmediatos
 
-1. Crear el proyecto UE5 y subirlo (o estructurarlo) en este repositorio
-2. Configurar Android SDK / NDK / Vulkan
-3. Implementar el ciclo de iluminación + Auto Exposure
-4. Construir el tramo de mapa de prueba
-5. Añadir un vehículo placeholder simple para recorrer el mapa
-6. Primeras mediciones de rendimiento
+1. Crear escena principal + entorno de prueba simple
+2. Implementar ciclo de iluminación y adaptación ocular
+3. Añadir carretera de prueba + vehículo placeholder (VehicleBody3D)
+4. Dejar que GitHub Actions genere la primera APK
+5. Probar en dispositivo real cuando sea posible
 
 ---
 
-**Motor confirmado: Unreal Engine 5**  
-**Empezamos ahora.**
+**Motor oficial actual: Godot 4**  
+**GitHub Actions ya puede compilar la APK.**
