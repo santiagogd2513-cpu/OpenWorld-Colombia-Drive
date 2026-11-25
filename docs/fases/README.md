@@ -2,10 +2,10 @@
 
 ## Fases Beta (Pruebas Técnicas)
 
-| Fase | Nombre | Enfoque principal |
-|------|--------|-------------------|
-| **Beta 1** | [Motor Gráfico, Rendimiento y Ciclos Visuales](beta-1.md) | Motor, día/noche, adaptación ocular, mapa de prueba |
-| **Beta 2** | [Física de Vehículos + Streaming + Tráfico Básico](beta-2.md) | Física, streaming, IA mínima de tráfico |
+| Fase | Nombre | Estado | Documento |
+|------|--------|--------|-----------|
+| **Beta 1** | Motor Gráfico, Rendimiento y Ciclos Visuales (UE5) | 🟡 En progreso | [beta-1.md](beta-1.md) · [tasks](beta-1/tasks.md) |
+| **Beta 2** | Física de Vehículos + Streaming + Tráfico Básico | ⏳ Preparada | [beta-2.md](beta-2.md) · [tasks](beta-2/tasks.md) |
 
 ## Fases Principales (Desarrollo Completo)
 
@@ -20,4 +20,9 @@
 
 ---
 
-**Orden recomendado:** Completar las dos Betas antes de iniciar la Fase 1.
+**CI/CD:**  
+GitHub Actions configurado (`.github/workflows/android-build.yml`).  
+- Validación automática del proyecto en cada push.  
+- Generación de APK disponible mediante **self-hosted runner** con Unreal Engine 5 + label `ue5-android`.
+
+**Orden recomendado:** Completar Beta 1 → Beta 2 → luego entrar a las Fases Principales.
