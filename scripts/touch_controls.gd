@@ -1,66 +1,73 @@
 extends CanvasLayer
 
-## Controles táctiles en pantalla para móvil (landscape)
-## Izquierda: girar | Derecha: acelerar / frenar
+## Controles táctiles fiables para Android
+## Expone .steer y .throttle para que el vehículo los lea
 
-@onready var btn_left: TouchScreenButton = $Controls/BtnLeft
-@onready var btn_right: TouchScreenButton = $Controls/BtnRight
-@onready var btn_accel: TouchScreenButton = $Controls/BtnAccel
-@onready var btn_brake: TouchScreenButton = $Controls/BtnBrake
+var steer: float = 0.0
+var throttle: float = 0.0
 
-var steer_input: float = 0.0
-var throttle_input: float = 0.0
+var _left: bool = false
+var _right: bool = false
+var _accel: bool = false
+var _brake: bool = false
 
 func _ready() -> void:
+	add_to_group("mobile_input")
 	visible = true
-	# En PC también se ven (útiles para probar); en móvil son esenciales
+
+	var root = $Controls
+	_connect_btn(root.get_node("BtnLeft"), "_on_left")
+	_connect_btn(root.get_node("BtnRight"), "_on_right")
+	_connect_btn(root.get_node("BtnAccel"), "_on_accel")
+	_connect_btn(root.get_node("BtnBrake"), "_on_brake")
+
+func _connect_btn(btn: Node, handler: String) -> void:
+	if btn == null:
+		return
+	# Soporta Button y TouchScreenButton
+	if btn.has_signal("button_down"):
+		btn.button_down.connect(Callable(self, handler).bind(true))
+		btn.button_up.connect(Callable(self, handler).bind(false))
+	elif btn is TouchScreenButton:
+		# TouchScreenButton usa pressed como propiedad; lo leemos en _process
+		pass
 
 func _process(_delta: float) -> void:
-	steer_input = 0.0
-	throttle_input = 0.0
+	# Fallback: leer TouchScreenButton si no hay señales de Button
+	var root = $Controls
+	var bl = root.get_node_or_null("BtnLeft")
+	var br = root.get_node_or_null("BtnRight")
+	var ba = root.get_node_or_null("BtnAccel")
+	var bb = root.get_node_or_null("BtnBrake")
 
-	if btn_left and btn_left.is_pressed():
-		steer_input += 1.0
-	if btn_right and btn_right.is_pressed():
-		steer_input -= 1.0
-	if btn_accel and btn_accel.is_pressed():
-		throttle_input += 1.0
-	if btn_brake and btn_brake.is_pressed():
-		throttle_input -= 1.0
+	if bl is TouchScreenButton:
+		_left = bl.is_pressed()
+	if br is TouchScreenButton:
+		_right = br.is_pressed()
+	if ba is TouchScreenButton:
+		_accel = ba.is_pressed()
+	if bb is TouchScreenButton:
+		_brake = bb.is_pressed()
 
-	# Inyectar en el InputMap virtual para que el VehicleController los lea
-	_set_action("steer_left", steer_input > 0.1)
-	_set_action("steer_right", steer_input < -0.1)
-	_set_action("accelerate", throttle_input > 0.1)
-	_set_action("brake", throttle_input < -0.1)
+	steer = 0.0
+	throttle = 0.0
+	if _left:
+		steer += 1.0
+	if _right:
+		steer -= 1.0
+	if _accel:
+		throttle += 1.0
+	if _brake:
+		throttle -= 1.0
 
-func _set_action(action: String, pressed: bool) -> void:
-	if pressed and not Input.is_action_pressed(action):
-		Input.action_press(action)
-	elif not pressed and Input.is_action_pressed(action):
-		# Solo soltar si no hay tecla física mantenida
-		if not Input.is_physical_key_pressed(KEY_W) and action == "accelerate":
-			Input.action_release(action)
-		elif not Input.is_physical_key_pressed(KEY_S) and action == "brake":
-			Input.action_release(action)
-		elif not Input.is_physical_key_pressed(KEY_A) and action == "steer_left":
-			Input.action_release(action)
-		elif not Input.is_physical_key_pressed(KEY_D) and action == "steer_right":
-			Input.action_release(action)
-		else:
-			# Para touch puro
-			if action in ["steer_left", "steer_right", "accelerate", "brake"]:
-				if not _physical_still_held(action):
-					Input.action_release(action)
+func _on_left(down: bool) -> void:
+	_left = down
 
-func _physical_still_held(action: String) -> bool:
-	match action:
-		"accelerate":
-			return Input.is_physical_key_pressed(KEY_W)
-		"brake":
-			return Input.is_physical_key_pressed(KEY_S)
-		"steer_left":
-			return Input.is_physical_key_pressed(KEY_A)
-		"steer_right":
-			return Input.is_physical_key_pressed(KEY_D)
-	return false
+func _on_right(down: bool) -> void:
+	_right = down
+
+func _on_accel(down: bool) -> void:
+	_accel = down
+
+func _on_brake(down: bool) -> void:
+	_brake = down
