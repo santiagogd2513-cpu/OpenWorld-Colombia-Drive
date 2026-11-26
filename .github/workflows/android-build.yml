@@ -19,6 +19,7 @@ on:
 env:
   GODOT_VERSION: "4.3"
   EXPORT_NAME: "OpenWorldColombiaDrive"
+  ANDROID_HOME: /usr/local/lib/android/sdk
 
 jobs:
   validate:
@@ -35,17 +36,7 @@ jobs:
           test -f icon.svg && echo "✓ icon.svg encontrado" || echo "⚠ Sin icono"
           test -f export_presets.cfg && echo "✓ export_presets.cfg encontrado" || echo "⚠ Sin export_presets"
           test -f scenes/main.tscn && echo "✓ escena principal encontrada" || echo "⚠ Sin main.tscn"
-          test -d docs/fases && echo "✓ Documentación de fases OK"
-          echo ""
           echo "Validación básica completada."
-
-      - name: Resumen
-        run: |
-          echo "### Validación del proyecto :white_check_mark:" >> $GITHUB_STEP_SUMMARY
-          echo "- project.godot presente" >> $GITHUB_STEP_SUMMARY
-          echo "- Icono y export presets revisados" >> $GITHUB_STEP_SUMMARY
-          echo "- Motor: **Godot 4**" >> $GITHUB_STEP_SUMMARY
-          echo "- App: **OpenWorld Colombia Drive** (categoría juego, modo inmersivo)" >> $GITHUB_STEP_SUMMARY
 
   build-android:
     name: Exportar APK (Godot 4)
@@ -57,14 +48,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Android SDK (sin paquete tools obsoleto)
+        run: |
+          # Los runners de GitHub ya traen Android SDK en /usr/local/lib/android/sdk
+          # Solo instalamos lo necesario con cmdline-tools modernos
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls -la "$ANDROID_HOME" || true
+
+          # Aceptar licencias e instalar platform-tools + build-tools + platform
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            2>&1 | tail -n 20 || {
+              echo "sdkmanager falló, intentando con la ruta completa..."
+              CMDTOOLS=$(find /usr/local/lib/android/sdk -name sdkmanager 2>/dev/null | head -n 1)
+              if [ -n "$CMDTOOLS" ]; then
+                yes | "$CMDTOOLS" --licenses >/dev/null 2>&1 || true
+                "$CMDTOOLS" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+              else
+                echo "No se encontró sdkmanager. Continuamos; Godot puede usar templates."
+              fi
+            }
+
+          echo "Android SDK listo (o parcialmente listo)."
+          echo "PATH=$PATH"
 
       - name: Download Godot + Export Templates
         run: |
@@ -77,44 +93,36 @@ jobs:
           chmod +x godot
 
           wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz -O templates.tpz
-          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           unzip -q templates.tpz -d /tmp/templates
           if [ -d /tmp/templates/templates ]; then
-            cp -r /tmp/templates/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+            cp -r /tmp/templates/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
           else
-            cp -r /tmp/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+            cp -r /tmp/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
           fi
 
           echo "Godot y templates listos."
           ./godot --version
+          ls -la "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -n 20
 
-      - name: Preparar build
+      - name: Preparar build y editor settings
         run: |
           mkdir -p build/android
+          mkdir -p "$HOME/.config/godot"
 
-          # Usar el export_presets.cfg del repositorio (ya tiene immersive + categoría juego + icono)
-          if [ ! -f export_presets.cfg ]; then
-            echo "No hay export_presets.cfg, creando uno de respaldo..."
-            cat > export_presets.cfg << 'EOF'
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-          export_path="build/android/OpenWorldColombiaDrive.apk"
-          [preset.0.options]
-          package/unique_name="org.colombia.drive.openworld"
-          package/name="OpenWorld Colombia Drive"
-          package/app_category=2
-          screen/immersive_mode=true
-          version/name="0.1.0-beta1"
-          architectures/armeabi-v7a=true
-          architectures/arm64-v8a=true
+          # Decirle a Godot dónde está el Android SDK
+          cat > "$HOME/.config/godot/editor_settings-4.tres" << EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "/usr/local/lib/android/sdk"
+          export/android/debug_keystore = ""
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
           EOF
-          fi
 
-          echo "Usando export_presets.cfg del proyecto."
-          echo "--- Contenido relevante ---"
-          grep -E "package/name|immersive|app_category|version/name|unique_name" export_presets.cfg || true
+          echo "Usando export_presets.cfg del proyecto:"
+          grep -E "package/name|immersive|app_category|version/name|unique_name|export_path" export_presets.cfg || true
 
       - name: Exportar APK
         id: export
@@ -122,16 +130,27 @@ jobs:
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           echo "Exportando OpenWorld Colombia Drive en modo: $BUILD_TYPE"
 
-          ./godot --headless --path . --export-${BUILD_TYPE} "Android" build/android/${{ env.EXPORT_NAME }}.apk 2>&1 | tee export.log || {
-            echo "Export terminó con código distinto de cero. Revisando si se generó APK..."
-          }
+          # Primera pasada: deja que Godot genere el debug keystore si hace falta
+          ./godot --headless --path . --quit-after 1 2>/dev/null || true
+
+          ./godot --headless --path . --export-${BUILD_TYPE} "Android" "build/android/${{ env.EXPORT_NAME }}.apk" 2>&1 | tee export.log
+          EXPORT_EXIT=${PIPESTATUS[0]}
 
           echo ""
+          echo "=== Código de salida del export: $EXPORT_EXIT ==="
           echo "=== Contenido de build/ ==="
-          find build -type f -ls || true
+          find build -type f -ls 2>/dev/null || true
           echo ""
-          echo "=== Últimas líneas del log ==="
-          tail -n 40 export.log || true
+          echo "=== Últimas 50 líneas del log ==="
+          tail -n 50 export.log || true
+
+          if [ ! -f "build/android/${{ env.EXPORT_NAME }}.apk" ]; then
+            echo "No se generó el APK. El job fallará."
+            exit 1
+          fi
+
+          echo "APK generado correctamente."
+          ls -lh "build/android/${{ env.EXPORT_NAME }}.apk"
 
       - name: Subir APK como Artifact
         uses: actions/upload-artifact@v4
@@ -140,7 +159,7 @@ jobs:
           path: |
             build/android/*.apk
             build/android/*.aab
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 21
 
       - name: Resumen
@@ -150,8 +169,7 @@ jobs:
           echo "- **Nombre:** OpenWorld Colombia Drive" >> $GITHUB_STEP_SUMMARY
           echo "- **Motor:** Godot ${{ env.GODOT_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tipo:** ${{ github.event.inputs.build_type || 'debug' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Modo inmersivo:** Sí (barras de navegación ocultas)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Modo inmersivo:** Sí" >> $GITHUB_STEP_SUMMARY
           echo "- **Categoría Android:** Juego" >> $GITHUB_STEP_SUMMARY
-          echo "- **Icono:** icon.svg" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Descarga el Artifact desde la pestaña **Actions** de este workflow." >> $GITHUB_STEP_SUMMARY
+          echo "Descarga el **Artifact** desde la pestaña Actions de este workflow." >> $GITHUB_STEP_SUMMARY
